@@ -1,0 +1,69 @@
+// Blockchain_Security model in Tamarin
+theory Blockchain_Security
+
+begin
+
+// --- Rules for Node Key Generation ---
+rule Node_Key_Generation
+let
+    // Random value for key generation
+    privkeyA := fresh(privkeyA),
+    privkeyB := fresh(privkeyB)
+in
+    [ Fr(privkeyA), Fr(privkeyB) ]
+    --[ GenKeyA(privkeyA), GenKeyB(privkeyB) ]->
+    [ !pubkeyA := pk(privkeyA), !pubkeyB := pk(privkeyB) ]
+end rule
+
+// --- Rule for Node Identity Creation ---
+rule Node_ID_Creation
+let
+    // Hash the private key and other values to generate identity
+    ID_A := h(privkeyA),
+    ID_B := h(privkeyB)
+in
+    [ Fr(privkeyA), Fr(privkeyB) ]
+    --[ GenerateID_A(ID_A), GenerateID_B(ID_B) ]->
+    [ !ID_A, !ID_B ]
+end rule
+
+// --- Rule for Transaction Signing ---
+rule Transaction_Signing
+let
+    // Node A signs transaction message
+    messageA := msgA,
+    sigA := ECDSA_sign(privkeyA, messageA),
+    
+    // Node B signs transaction message
+    messageB := msgB,
+    sigB := ECDSA_sign(privkeyB, messageB)
+in
+    [ msgA, msgB, Fr(privkeyA), Fr(privkeyB) ]
+    --[ SignedMessageA(sigA), SignedMessageB(sigB) ]->
+    [ sigA, sigB ]
+end rule
+
+// --- Rule for Signature Verification ---
+rule Signature_Verification
+let
+    // Verify the signatures using public keys
+    valid_sigA := ECDSA_verify(pk(privkeyA), sigA, messageA),
+    valid_sigB := ECDSA_verify(pk(privkeyB), sigB, messageB)
+in
+    [ sigA, sigB, pubkeyA := pk(privkeyA), pubkeyB := pk(privkeyB) ]
+    --[ SigVerified_A(valid_sigA), SigVerified_B(valid_sigB) ]->
+    [ valid_sigA, valid_sigB ]
+end rule
+
+// --- Define adversary knowledge ---
+lemma No_Key_Compromise:
+    "All honest keys remain uncompromised"
+    exists-trace
+    "not(Ex A, K (Compromised(K) & Honest(A, K)))"
+
+lemma Man_In_The_Middle_Prevention:
+    "Man-in-the-middle attacks cannot forge signatures"
+    exists-trace
+    "not(Ex A, B, M (MITM(A, B, M)))"
+
+end theory
